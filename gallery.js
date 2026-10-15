@@ -4,10 +4,14 @@
   const grid = document.getElementById("photoGrid");
   const empty = document.getElementById("emptyState");
   const search = document.getElementById("searchInput");
-  const eventFilter = document.getElementById("eventFilter");
+  const albumGrid = document.getElementById("albumGrid");
+  const backBtn = document.getElementById("backBtn");
+  const galleryTitle = document.getElementById("galleryTitle");
   const count = document.getElementById("photoCount");
   const lightbox = document.getElementById("lightbox");
-  let client = null, allPhotos = [], visiblePhotos = [], currentIndex = 0;
+  let client = null, allPhotos = [], visiblePhotos = [], currentIndex = 0, currentEvent = null;
+  const NO_EVENT = "Sin evento";
+  const evName = p => p.event_name || NO_EVENT;
 
   document.getElementById("year").textContent = new Date().getFullYear();
 
@@ -35,13 +39,54 @@
     try { return new Date(value).toLocaleDateString("es-ES", {day:"2-digit", month:"short", year:"numeric"}); }
     catch { return ""; }
   }
+  function matches(p, q) {
+    const hay = [p.title, p.event_name, p.dorsal, p.description].filter(Boolean).join(" ").toLocaleLowerCase("es");
+    return !q || hay.includes(q);
+  }
+  function pubUrl(p) { return client.storage.from("photos").getPublicUrl(p.storage_path).data.publicUrl; }
+  function showAlbum(name) {
+    currentEvent = name;
+    search.value = "";
+    render();
+    document.getElementById("galerias").scrollIntoView({behavior:"smooth"});
+  }
+  function renderAlbums(q) {
+    const groups = new Map();
+    allPhotos.filter(p => matches(p, q)).forEach(p => {
+      const k = evName(p);
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(p);
+    });
+    albumGrid.innerHTML = "";
+    [...groups.entries()].forEach(([name, photos]) => {
+      const cover = photos[0];
+      const card = document.createElement("button");
+      card.type = "button"; card.className = "album-card";
+      card.setAttribute("aria-label", `Abrir galería ${name}`);
+      const wrap = document.createElement("span"); wrap.className = "album-cover";
+      const img = document.createElement("img"); img.src = pubUrl(cover); img.alt = `Portada de ${name}`; img.loading = "lazy";
+      const cnt = document.createElement("span"); cnt.className = "album-count"; cnt.textContent = `${photos.length} ${photos.length === 1 ? "foto" : "fotos"}`;
+      wrap.append(img, cnt);
+      const info = document.createElement("span"); info.className = "album-info";
+      const h = document.createElement("h3"); h.textContent = name;
+      const sm = document.createElement("small"); sm.textContent = formatDate(cover.created_at);
+      info.append(h, sm);
+      card.append(wrap, info);
+      card.addEventListener("click", () => showAlbum(name));
+      albumGrid.append(card);
+    });
+    count.textContent = `${groups.size} ${groups.size === 1 ? "galería" : "galerías"}`;
+    empty.classList.toggle("hidden", groups.size > 0);
+  }
   function render() {
     const q = search.value.trim().toLocaleLowerCase("es");
-    const ev = eventFilter.value;
-    visiblePhotos = allPhotos.filter(p => {
-      const hay = [p.title, p.event_name, p.dorsal, p.description].filter(Boolean).join(" ").toLocaleLowerCase("es");
-      return (!q || hay.includes(q)) && (!ev || p.event_name === ev);
-    });
+    const inAlbum = currentEvent !== null;
+    albumGrid.classList.toggle("hidden", inAlbum);
+    grid.classList.toggle("hidden", !inAlbum);
+    backBtn.classList.toggle("hidden", !inAlbum);
+    galleryTitle.firstChild.textContent = inAlbum ? currentEvent : "Galerías";
+    if (!inAlbum) { visiblePhotos = []; renderAlbums(q); return; }
+    visiblePhotos = allPhotos.filter(p => evName(p) === currentEvent && matches(p, q));
     grid.innerHTML = "";
     count.textContent = `${visiblePhotos.length} ${visiblePhotos.length === 1 ? "fotografía" : "fotografías"}`;
     visiblePhotos.forEach((p, i) => {
@@ -53,7 +98,7 @@
       open.type = "button";
       open.setAttribute("aria-label", `Abrir ${p.title || "fotografía"}`);
       const img = document.createElement("img");
-      img.src = data.publicUrl; img.alt = p.title || "Fotografía de David.fototrl"; img.loading = "lazy";
+      img.src = data.publicUrl; img.alt = p.title || "Fotografía de Repullés Muñoz"; img.loading = "lazy";
       img.onerror = () => { img.alt = "No se pudo cargar esta imagen"; };
       const overlay = document.createElement("span"); overlay.className = "photo-hover"; overlay.textContent = "Ver fotografía ↗";
       open.append(img, overlay);
@@ -91,7 +136,8 @@
   document.getElementById("nextPhoto").addEventListener("click", () => step(1));
   lightbox.addEventListener("click", e => { if (e.target === lightbox) closeLightbox(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") closeLightbox(); if (!lightbox.classList.contains("hidden") && e.key === "ArrowLeft") step(-1); if (!lightbox.classList.contains("hidden") && e.key === "ArrowRight") step(1); });
-  search.addEventListener("input", render); eventFilter.addEventListener("change", render);
+  search.addEventListener("input", render);
+  backBtn.addEventListener("click", () => { currentEvent = null; search.value = ""; render(); });
 
   async function init() {
     if (!window.supabase || !configReady()) {
@@ -103,11 +149,8 @@
       const { data, error } = await client.from("photos").select("id,title,event_name,dorsal,description,storage_path,created_at").order("created_at", {ascending:false});
       if (error) throw error;
       allPhotos = data || [];
-      const events = [...new Set(allPhotos.map(p => p.event_name).filter(Boolean))].sort((a,b) => a.localeCompare(b, "es"));
-      events.forEach(name => { const opt = document.createElement("option"); opt.value=name; opt.textContent=name; eventFilter.append(opt); });
       status.classList.add("hidden");
       render();
-      if (!allPhotos.length) { empty.classList.remove("hidden"); }
     } catch (e) {
       say("No se pudo cargar la galería. Comprueba que has ejecutado el SQL y configurado las claves. Detalle: " + (e.message || "error desconocido"), true);
     }
