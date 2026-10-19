@@ -1,0 +1,27 @@
+/* Álbumes privados + aviso de copyright */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(5,6,8,.88);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.modal-box{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);padding:clamp(22px,4vw,34px);border-radius:2px;margin:auto}
+.modal-box h3{font-family:"Cormorant Garamond",Georgia,serif;font-size:30px;font-weight:600;margin:0 0 14px}
+.modal-box p{color:#c9cacf;line-height:1.7;margin:0 0 12px}
+.modal-box ul{margin:0 0 18px;padding-left:20px;color:#c9cacf;line-height:1.7}
+.modal-box li{margin-bottom:6px}
+.credit-box{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#161616;border:1px dashed #4a4a4d;padding:12px 14px;margin:0 0 8px}
+.credit-box code{font:600 13px/1.5 "DM Sans",Arial,sans-serif;overflow-wrap:anywhere}
+.modal-box p.modal-msg{min-height:20px;font-size:12px;color:var(--muted);margin:6px 0 0}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:14px}
+.modal-input{width:100%;background:#161616;border:1px solid #383a43;color:var(--text);padding:13px 12px;outline:none;border-radius:2px}
+.modal-input:focus{border-color:var(--accent)}
+.album-cover-locked{display:grid;place-items:center;background:repeating-linear-gradient(135deg,#1d1d1f 0 16px,#232326 16px 32px)}
+.album-lock{font-size:44px;position:relative;z-index:1}
+.album-locked:hover .album-cover-locked{outline:1px solid var(--accent)}
+button.download-link{background:none;border:0;color:inherit;cursor:pointer;padding:0}
+.lightbox-details .button{white-space:nowrap}
+
+/* Panel del fotógrafo */
+.form-stack label.check-row{flex-direction:row;align-items:center;gap:10px}
+.form-stack label.check-row input{width:auto}
+.pending-box{margin-top:22px;border-color:#6b4a2a}
+.pending-box h2{margin-bottom:7px}
+.pending-box .button{margin-top:14px}
+.protect-card{margin-top:22px}
+.lock-tag{color:var(--accent)}

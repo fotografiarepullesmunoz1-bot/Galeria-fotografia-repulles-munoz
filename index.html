@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="img/logo-blanco.png">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="private.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
 </head>
@@ -72,6 +73,42 @@
     <button id="prevPhoto" class="lightbox-arrow lightbox-prev" aria-label="Fotografía anterior">‹</button>
     <div class="lightbox-content"><img id="lightboxImage" alt=""><div class="lightbox-details"><div><p id="lightboxEvent" class="eyebrow"></p><h3 id="lightboxTitle"></h3><p id="lightboxDorsal" class="muted"></p></div><a id="lightboxDownload" class="button button-light" href="#" target="_blank" rel="noopener">Descargar original ↓</a></div></div>
     <button id="nextPhoto" class="lightbox-arrow lightbox-next" aria-label="Fotografía siguiente">›</button>
+  </div>
+
+  <div id="copyrightModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="copyrightTitle">
+    <div class="modal-box">
+      <h3 id="copyrightTitle">Antes de descargar</h3>
+      <p>Las fotografías de esta galería son obra de David Repullés Muñoz y están protegidas por derechos de autor.</p>
+      <p>Al descargar y compartir una fotografía, recuerda:</p>
+      <ul>
+        <li>Mencionar al autor: Fotografía Repullés Muñoz</li>
+        <li>Etiquetar el perfil @David.fototrl cuando publiques en redes sociales.</li>
+        <li>No eliminar la firma o marca de agua, si la fotografía la incluye.</li>
+        <li>Solicitar permiso para usos comerciales o para cualquier utilización distinta de la autorizada.</li>
+      </ul>
+      <div class="credit-box">
+        <code id="creditText">Fotografía: David Repullés Muñoz · @David.fototrl</code>
+        <button id="copyCredit" class="button button-outline" type="button">Copiar crédito</button>
+      </div>
+      <p id="copyMessage" class="modal-msg" role="status"></p>
+      <div class="modal-actions">
+        <button id="cancelDownload" class="button button-outline" type="button">Cancelar</button>
+        <button id="confirmDownload" class="button button-light" type="button">Entendido, descargar ↓</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="unlockModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="unlockTitle">
+    <form id="unlockForm" class="modal-box" autocomplete="off">
+      <h3 id="unlockTitle">Galería privada</h3>
+      <p>Esta galería está protegida. Introduce la contraseña que te han facilitado para verla.</p>
+      <input id="unlockPassword" class="modal-input" type="password" placeholder="Contraseña" required autocomplete="off">
+      <p id="unlockMessage" class="modal-msg" role="status"></p>
+      <div class="modal-actions">
+        <button id="unlockCancel" class="button button-outline" type="button">Cancelar</button>
+        <button id="unlockSubmit" class="button button-light" type="submit">Entrar ↗</button>
+      </div>
+    </form>
   </div>
 
   <script src="gallery.js"></script>

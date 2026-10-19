@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="img/logo-blanco.png">
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="private.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
 </head>
@@ -38,11 +39,33 @@
             <label>Dorsal o equipo (opcional)<input id="dorsal" type="text" maxlength="100" placeholder="Ej. 215 · Santana Racing Team"></label>
           </div>
           <label>Título (opcional; si se deja vacío se usa el nombre del archivo)<input id="photoTitle" type="text" maxlength="140" placeholder="Ej. Acción en la prólogo"></label>
+          <label class="check-row"><input id="isPrivate" type="checkbox"> 🔒 Álbum privado (con contraseña)</label>
+          <label id="passwordField" class="hidden">Contraseña del álbum (mínimo 6 caracteres; si el álbum ya es privado, déjala vacía para mantener la actual)<input id="albumPassword" type="password" autocomplete="new-password" minlength="6" maxlength="100"></label>
           <button class="button button-light" type="submit">Subir fotografías <span>↑</span></button>
         </form>
         <div id="uploadProgress" class="form-message" role="status"></div>
         <p class="tiny-note">Consejo: sube JPEG de alta calidad para fotos de cámara. Límite inicial por archivo: 50 MB (configurable en Supabase).</p>
       </div>
+
+      <div class="upload-card protect-card">
+        <h2>Proteger un álbum ya publicado</h2><p class="muted">Pon contraseña a un evento que ya tiene fotos públicas (por ejemplo, Santana Racing Team). Después podrás moverlas a la zona privada.</p>
+        <form id="protectForm" class="form-stack">
+          <div class="form-grid">
+            <label>Evento / galería<input id="protectEvent" type="text" list="eventOptions" required maxlength="100" placeholder="Nombre exacto del evento"><datalist id="eventOptions"></datalist></label>
+            <label>Contraseña (mínimo 6 caracteres)<input id="protectPassword" type="password" autocomplete="new-password" required minlength="6" maxlength="100"></label>
+          </div>
+          <button class="button button-light" type="submit">Proteger álbum 🔒</button>
+        </form>
+        <div id="protectMessage" class="form-message" role="status"></div>
+      </div>
+
+      <div id="pendingBox" class="upload-card pending-box hidden">
+        <h2>Fotos por proteger</h2>
+        <p id="pendingText" class="muted"></p>
+        <button id="pendingBtn" class="button button-light" type="button">Mover a la zona privada</button>
+        <div id="pendingProgress" class="form-message" role="status"></div>
+      </div>
+
       <div class="manage-heading"><h2>Fotografías publicadas</h2><span id="adminPhotoCount" class="photo-count"></span></div>
       <div id="adminStatus" class="form-message"></div>
       <div id="adminPhotoList" class="admin-photo-list"></div>

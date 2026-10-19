@@ -16,6 +16,8 @@ Galería web estática con:
 - `config.js`: URL y clave pública de Supabase.
 - `schema.sql`: base de datos, permisos y bucket.
 - `authorize_admin.sql`: autorizar la cuenta de fotógrafo.
+- `private_albums.sql`: álbumes privados con contraseña (apartado 6).
+- `private.css`: estilos del aviso de copyright, del desbloqueo y del panel de álbumes privados.
 
 ## 1. Crear Supabase
 1. Entra en https://supabase.com/ y crea un proyecto.
@@ -68,9 +70,29 @@ La galería y el panel se publican en la misma web:
 
 Para borrar una foto, usa el botón **Eliminar** del panel. La operación elimina el archivo de Storage y su registro.
 
+## 6. Álbumes privados con contraseña
+Permite proteger álbumes completos (por ejemplo, Santana Racing Team). La contraseña se comprueba en Supabase, no en el navegador, y las fotos se guardan en un bucket privado.
+
+**Activarlo (una sola vez)**
+1. En Supabase abre **SQL Editor**, pega todo `private_albums.sql` y pulsa **Run**. Hazlo antes de subir los archivos nuevos a GitHub.
+2. En **Authentication → Sign In / Providers** activa **Allow anonymous sign-ins**. Es lo que permite recordar qué álbumes ha desbloqueado cada visitante.
+3. Sube a GitHub los archivos nuevos: `index.html`, `gallery.js`, `admin.html`, `admin.js` y `private.css`.
+
+**Uso**
+- *Álbum nuevo privado*: en el panel, al subir fotos marca **Álbum privado** y escribe la contraseña. Las fotos van al bucket privado.
+- *Álbum que ya tienes publicado*: usa **Proteger un álbum ya publicado**, escribe el nombre exacto del evento y la contraseña, y después pulsa **Mover a la zona privada** en «Fotos por proteger».
+- *Cambiar la contraseña*: vuelve a ponerla en cualquiera de los dos formularios. Se cierran los accesos que ya estaban concedidos.
+- Los visitantes ven el álbum con candado (nombre y número de fotos) y deben escribir la contraseña. Tras acertar, el navegador lo recuerda.
+- Los intentos fallidos están limitados: 20 cada 10 minutos por álbum.
+
+Limitaciones: las fotos se sirven con enlaces temporales de una hora, y quien tenga la contraseña puede descargarlas y compartirlas. De momento no hay botón para convertir un álbum privado otra vez en público.
+
+## 7. Aviso de copyright antes de descargar
+Al pulsar **Descargar** (en la tarjeta o en el visor) aparece un aviso con las normas de uso, el crédito `Fotografía: David Repullés Muñoz · @David.fototrl` y un botón para copiarlo. La descarga solo empieza al pulsar **Entendido, descargar**. El texto está en `index.html` (`#copyrightModal`) y el crédito copiado en la constante `CREDIT` de `gallery.js`.
+
 ## Límites y privacidad
 - El proyecto está configurado para imágenes JPEG, PNG, WebP y AVIF de hasta 50 MB cada una. Puedes ajustar el límite en `schema.sql` y en el bucket de Supabase.
-- Las imágenes del bucket son públicas: cualquiera que tenga el enlace directo puede verlas y descargarlas. No subas fotos que deban ser privadas.
+- Las imágenes del bucket `photos` son públicas: cualquiera que tenga el enlace directo puede verlas y descargarlas. Las fotos que deban ser privadas se guardan en álbumes privados (apartado 6).
 - La cuota gratuita de almacenamiento, transferencia y base de datos depende del plan vigente de Supabase; revisa el panel de uso para evitar sorpresas. Una galería de fotos de cámara puede consumir mucho almacenamiento.
 - Las fotografías se guardan sin recomprimir. La web las muestra en miniaturas mediante CSS, pero la descarga enlaza al archivo original.
 - El archivo `config.js` contiene solo la URL y clave pública. Nunca pegues una contraseña, `service_role` key o secret key en ningún archivo público.
