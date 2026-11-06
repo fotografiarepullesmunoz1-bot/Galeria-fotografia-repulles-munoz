@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="private.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
   <script src="config.js"></script>
 </head>
 <body>
@@ -47,7 +48,11 @@
                 <span id="photoCount" class="photo-count">Cargando fotos…</span>
       </div>
 
-      <button id="backBtn" class="back-btn hidden" type="button">← Todas las galerías</button>
+      <div class="album-bar">
+        <button id="backBtn" class="back-btn hidden" type="button">← Todas las galerías</button>
+        <button id="downloadAllBtn" class="button button-light hidden" type="button">Descargar todas ↓</button>
+      </div>
+      <p id="zipProgress" class="zip-progress hidden" role="status"></p>
       <div id="status" class="status"><span class="loader"></span> Preparando la galería…</div>
       <div id="albumGrid" class="album-grid"></div>
       <div id="photoGrid" class="photo-grid hidden"></div>

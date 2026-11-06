@@ -25,3 +25,12 @@ button.download-link{background:none;border:0;color:inherit;cursor:pointer;paddi
 .pending-box .button{margin-top:14px}
 .protect-card{margin-top:22px}
 .lock-tag{color:var(--accent)}
+
+/* Descargar todas + ajustes de copyright */
+.album-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.album-bar .button{white-space:nowrap}
+.zip-progress{color:var(--muted);font-size:13px;margin:10px 0 0}
+.zip-progress.error-text{color:#ff8a8a}
+.copyright-list{display:grid;gap:10px;margin-top:14px}
+.copyright-row{display:flex;align-items:center;gap:10px;cursor:pointer}
+.copyright-row input{width:auto}

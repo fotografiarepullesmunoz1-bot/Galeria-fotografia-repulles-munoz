@@ -19,7 +19,11 @@
   const pendingText = document.getElementById("pendingText");
   const pendingBtn = document.getElementById("pendingBtn");
   const pendingProgress = document.getElementById("pendingProgress");
-  let client = null, currentUser = null, pendingPhotos = [];
+  const copyrightList = document.getElementById("copyrightList");
+  const copyrightMessage = document.getElementById("copyrightMessage");
+  const showCopyrightEl = document.getElementById("showCopyright");
+  const eventNameEl = document.getElementById("eventName");
+  let client = null, currentUser = null, pendingPhotos = [], settings = new Map();
   const BUCKET = "photos";
   const PRIVATE_BUCKET = "private-photos";
   const MAX_FILE_SIZE = 50 * 1024 * 1024;
@@ -53,6 +57,39 @@
     const { data, error } = await client.rpc("list_private_albums");
     if (error) return { ok: false, set: new Set(), error };
     return { ok: true, set: new Set((data || []).map(a => a.event_name)) };
+  }
+  async function loadSettings() {
+    const { data, error } = await client.from("album_settings").select("event_name,show_copyright");
+    if (error) return { ok: false, error };
+    settings = new Map((data || []).map(s => [s.event_name, s.show_copyright !== false]));
+    return { ok: true };
+  }
+  async function saveSetting(name, value) {
+    const { error } = await client.from("album_settings")
+      .upsert({ event_name: name, show_copyright: value, updated_at: new Date().toISOString() }, { onConflict: "event_name" });
+    if (!error) settings.set(name, value);
+    return error;
+  }
+  async function renderCopyrightList(data) {
+    copyrightList.innerHTML = "";
+    const res = await loadSettings();
+    if (!res.ok) { message(copyrightMessage, "No se pudieron leer los ajustes. ¿Has ejecutado album_settings.sql en Supabase? (" + res.error.message + ")", true); return; }
+    message(copyrightMessage, "");
+    const names = [...new Set(data.map(p => p.event_name).filter(Boolean))].sort((a, b) => a.localeCompare(b, "es"));
+    if (!names.length) { copyrightList.textContent = "Todavía no hay galerías."; return; }
+    names.forEach(name => {
+      const label = document.createElement("label"); label.className = "copyright-row";
+      const input = document.createElement("input"); input.type = "checkbox"; input.checked = settings.get(name) !== false;
+      const span = document.createElement("span"); span.textContent = name;
+      input.addEventListener("change", async () => {
+        input.disabled = true;
+        const err = await saveSetting(name, input.checked);
+        input.disabled = false;
+        if (err) { input.checked = !input.checked; message(copyrightMessage, "No se pudo guardar: " + err.message, true); return; }
+        message(copyrightMessage, `«${name}»: aviso de copyright ${input.checked ? "activado" : "desactivado"}.`);
+      });
+      label.append(input, span); copyrightList.append(label);
+    });
   }
   async function showSession(user) {
     if (!user) { currentUser=null; dashboard.classList.add("hidden"); loginPanel.classList.remove("hidden"); return; }
@@ -100,6 +137,7 @@
     }
 
     count.textContent = `${data.length} publicadas`;
+    await renderCopyrightList(data);
     if (!data.length) { message(adminStatus,"Todavía no has publicado fotografías."); return; }
     message(adminStatus,"");
     data.forEach(p => {
@@ -127,6 +165,11 @@
     });
   }
 
+  // Al escribir un evento que ya existe, se muestra su ajuste actual de copyright.
+  eventNameEl.addEventListener("input", () => {
+    const v = clean(eventNameEl.value);
+    if (settings.has(v)) showCopyrightEl.checked = settings.get(v);
+  });
   isPrivateEl.addEventListener("change", () => {
     passwordField.classList.toggle("hidden", !isPrivateEl.checked);
     if (!isPrivateEl.checked) albumPasswordEl.value = "";
@@ -179,7 +222,12 @@
         if(dbErr){await client.storage.from(bucket).remove([path]);errors.push(`${file.name}: ${dbErr.message}`);continue;}
         done++;
       }
-      message(uploadProgress,`Listo: ${done} de ${files.length} fotografía(s) publicada(s)${wantPrivate ? " en el álbum privado" : ""}.${errors.length ? " Errores: "+errors.join(" | ") : ""}`,errors.length>0);
+      let settingNote = "";
+      if (done > 0) {
+        const sErr = await saveSetting(eventName, showCopyrightEl.checked);
+        if (sErr) settingNote = " No se pudo guardar el ajuste de copyright (¿falta ejecutar album_settings.sql?).";
+      }
+      message(uploadProgress,`Listo: ${done} de ${files.length} fotografía(s) publicada(s)${wantPrivate ? " en el álbum privado" : ""}.${errors.length ? " Errores: "+errors.join(" | ") : ""}${settingNote}`,errors.length>0 || !!settingNote);
       uploadForm.reset(); passwordField.classList.add("hidden");
       await loadPhotos();
     } finally {

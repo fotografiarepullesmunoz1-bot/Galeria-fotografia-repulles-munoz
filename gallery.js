@@ -21,6 +21,9 @@
   const cancelDownloadBtn = document.getElementById("cancelDownload");
   const confirmDownloadBtn = document.getElementById("confirmDownload");
 
+  const downloadAllBtn = document.getElementById("downloadAllBtn");
+  const zipProgress = document.getElementById("zipProgress");
+
   const unlockModal = document.getElementById("unlockModal");
   const unlockForm = document.getElementById("unlockForm");
   const unlockTitle = document.getElementById("unlockTitle");
@@ -32,6 +35,9 @@
   let client = null, allPhotos = [], privateAlbums = [], visiblePhotos = [];
   let currentIndex = 0, currentEvent = null, pendingDownload = null, unlockTarget = null, renderToken = 0;
   const unlocked = new Set();
+  const copyrightOff = new Set(); // galerías donde el fotógrafo ha desactivado el aviso
+  const ZIP_PART_BYTES = 400 * 1024 * 1024; // el ZIP se divide en partes de ~400 MB
+  let zipping = false;
   const signed = new Map(); // storage_path -> { url, exp }
   const NO_EVENT = "Sin evento";
   const evName = p => p.event_name || NO_EVENT;
@@ -109,7 +115,12 @@
     copyMessage.textContent = text;
     copyMessage.classList.toggle("error-text", bad);
   }
+  async function directDownload(photo) {
+    try { startDownload(await buildDownloadUrl(photo)); }
+    catch (e) { alert("No se pudo preparar la descarga: " + (e.message || "error desconocido")); }
+  }
   function askDownload(photo) {
+    if (copyrightOff.has(evName(photo))) { directDownload(photo); return; }
     pendingDownload = photo;
     setCopyMessage("");
     copyCreditBtn.textContent = "Copiar crédito";
@@ -146,6 +157,7 @@
   confirmDownloadBtn.addEventListener("click", async () => {
     const p = pendingDownload;
     if (!p) return;
+    if (p.all) { closeCopyright(); downloadAll(); return; }
     confirmDownloadBtn.disabled = true;
     try {
       startDownload(await buildDownloadUrl(p));
@@ -156,6 +168,86 @@
       confirmDownloadBtn.disabled = false;
     }
   });
+
+  // ---------- Descargar todas (ZIP) ----------
+  function zipMsg(text, bad=false) {
+    zipProgress.textContent = text;
+    zipProgress.classList.toggle("error-text", bad);
+    zipProgress.classList.toggle("hidden", !text);
+  }
+  function saveBlob(blob, name) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  function askDownloadAll() {
+    if (!visiblePhotos.length || zipping) return;
+    if (copyrightOff.has(currentEvent)) { downloadAll(); return; }
+    pendingDownload = { all: true };
+    setCopyMessage("");
+    copyCreditBtn.textContent = "Copiar crédito";
+    copyrightModal.classList.remove("hidden");
+    syncBodyLock();
+    confirmDownloadBtn.focus();
+  }
+  async function downloadAll() {
+    if (zipping) return;
+    const photos = visiblePhotos.slice();
+    if (!photos.length) return;
+    if (!window.JSZip) { zipMsg("No se pudo cargar el componente de descarga. Recarga la página e inténtalo de nuevo.", true); return; }
+    zipping = true; downloadAllBtn.disabled = true;
+    const album = safeFilename(currentEvent || "galeria");
+    const withCredit = !copyrightOff.has(currentEvent);
+    const used = new Set();
+    const failed = [];
+    const newZip = () => { const z = new JSZip(); if (withCredit) z.file("CREDITO.txt", CREDIT + "\n"); return z; };
+    const uniqueName = p => {
+      let name = downloadName(p), n = 2;
+      while (used.has(name.toLowerCase())) name = downloadName(p).replace(/(\.[^.]+)$/, ` (${n++})$1`);
+      used.add(name.toLowerCase());
+      return name;
+    };
+    const saveZip = async (zip, name) => {
+      const blob = await zip.generateAsync({ type: "blob", compression: "STORE" },
+        m => zipMsg(`Creando ${name}… ${Math.round(m.percent)}%`));
+      saveBlob(blob, name);
+    };
+    let zip = newZip(), bytes = 0, inPart = 0, part = 1, done = 0;
+    try {
+      await signPhotos(photos);
+      for (let i = 0; i < photos.length; i += 3) {
+        const chunk = photos.slice(i, i + 3);
+        const blobs = await Promise.all(chunk.map(async p => {
+          try {
+            const r = await fetch(imgUrl(p));
+            if (!r.ok) throw new Error("HTTP " + r.status);
+            return await r.blob();
+          } catch (e) { failed.push(p.title || p.storage_path); return null; }
+        }));
+        chunk.forEach((p, k) => {
+          if (!blobs[k]) return;
+          zip.file(uniqueName(p), blobs[k], { binary: true });
+          bytes += blobs[k].size; inPart++; done++;
+        });
+        zipMsg(`Descargando fotografías… ${Math.min(i + 3, photos.length)} de ${photos.length}`);
+        if (bytes >= ZIP_PART_BYTES && i + 3 < photos.length) {
+          await saveZip(zip, `${album} (parte ${part}).zip`);
+          part++; zip = newZip(); bytes = 0; inPart = 0;
+        }
+      }
+      if (inPart) await saveZip(zip, part > 1 ? `${album} (parte ${part}).zip` : `${album}.zip`);
+      zipMsg(done
+        ? `Listo: ${done} fotografía(s) descargada(s)${part > 1 ? ` en ${part} archivos ZIP` : ""}.${failed.length ? ` No se pudieron descargar ${failed.length}: ${failed.join(", ")}.` : ""}`
+        : "No se pudo descargar ninguna fotografía.", !done || failed.length > 0);
+    } catch (e) {
+      zipMsg("No se pudo crear el ZIP: " + (e.message || "error desconocido") + ". Si la galería es muy grande, prueba desde un ordenador.", true);
+    } finally {
+      zipping = false; downloadAllBtn.disabled = false;
+    }
+  }
+  downloadAllBtn.addEventListener("click", askDownloadAll);
 
   // ---------- Álbumes privados ----------
   async function ensureSession() {
@@ -287,6 +379,7 @@
     albumGrid.classList.toggle("hidden", inAlbum);
     grid.classList.toggle("hidden", !inAlbum);
     backBtn.classList.toggle("hidden", !inAlbum);
+    if (!inAlbum) { downloadAllBtn.classList.add("hidden"); zipMsg(""); }
     galleryTitle.firstChild.textContent = inAlbum ? currentEvent : "Galerías";
     if (!inAlbum) { visiblePhotos = []; await renderAlbums(q, token); return; }
 
@@ -297,6 +390,8 @@
 
     grid.innerHTML = "";
     count.textContent = `${visiblePhotos.length} ${visiblePhotos.length === 1 ? "fotografía" : "fotografías"}`;
+    downloadAllBtn.textContent = `Descargar todas (${visiblePhotos.length}) ↓`;
+    downloadAllBtn.classList.toggle("hidden", !visiblePhotos.length);
     visiblePhotos.forEach((p, i) => {
       const card = document.createElement("article");
       card.className = "photo-card";
@@ -376,6 +471,14 @@
     allPhotos = res.data || [];
     allPhotos.filter(isPriv).forEach(p => unlocked.add(evName(p)));
   }
+  async function loadSettings() {
+    try {
+      const { data, error } = await client.from("album_settings").select("event_name,show_copyright");
+      if (error) return; // si falta el SQL, se mantiene el aviso siempre activado
+      copyrightOff.clear();
+      (data || []).forEach(s => { if (s.show_copyright === false) copyrightOff.add(s.event_name); });
+    } catch (e) { console.error(e); }
+  }
   async function loadPrivateAlbums() {
     try {
       const { data, error } = await client.rpc("list_private_albums");
@@ -392,6 +495,7 @@
     try {
       await loadPhotos();
       await loadPrivateAlbums();
+      await loadSettings();
       status.classList.add("hidden");
       render();
     } catch (e) {

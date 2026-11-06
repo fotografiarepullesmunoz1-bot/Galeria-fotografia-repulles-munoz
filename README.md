@@ -17,6 +17,7 @@ Galería web estática con:
 - `schema.sql`: base de datos, permisos y bucket.
 - `authorize_admin.sql`: autorizar la cuenta de fotógrafo.
 - `private_albums.sql`: álbumes privados con contraseña (apartado 6).
+- `album_settings.sql`: ajuste para mostrar u ocultar el aviso de copyright por galería (apartado 8).
 - `private.css`: estilos del aviso de copyright, del desbloqueo y del panel de álbumes privados.
 
 ## 1. Crear Supabase
@@ -89,6 +90,22 @@ Limitaciones: las fotos se sirven con enlaces temporales de una hora, y quien te
 
 ## 7. Aviso de copyright antes de descargar
 Al pulsar **Descargar** (en la tarjeta o en el visor) aparece un aviso con las normas de uso, el crédito `Fotografía: David Repullés Muñoz · @David.fototrl` y un botón para copiarlo. La descarga solo empieza al pulsar **Entendido, descargar**. El texto está en `index.html` (`#copyrightModal`) y el crédito copiado en la constante `CREDIT` de `gallery.js`.
+
+## 8. Aviso de copyright opcional y descarga de toda la galería
+**Activarlo (una sola vez)**
+1. En Supabase abre **SQL Editor**, pega todo `album_settings.sql` y pulsa **Run**. Hazlo antes de subir los archivos nuevos a GitHub.
+2. Sube a GitHub los archivos actualizados: `index.html`, `gallery.js`, `admin.html`, `admin.js` y `private.css`.
+
+**Copyright por galería**
+- En el panel, la tarjeta **Aviso de copyright por galería** lista todos los eventos con una casilla. Marcada: sale el aviso antes de descargar. Desmarcada: la descarga es directa. Se guarda al instante.
+- Al subir fotos también hay una casilla «Mostrar aviso de copyright». Si escribes un evento que ya existe, la casilla se rellena con su ajuste actual.
+- Las galerías sin ajuste guardado muestran el aviso (como hasta ahora).
+
+**Descargar todas**
+- Dentro de una galería aparece el botón **Descargar todas (N)**. Crea un ZIP en el navegador con las fotos originales y lo descarga. Respeta el filtro de búsqueda activo.
+- Si el aviso está activado, sale una sola vez antes de empezar y el ZIP incluye un `CREDITO.txt`.
+- Si la galería pesa mucho, se divide en varios ZIP de unos 400 MB («parte 1», «parte 2»…). El navegador puede pedir permiso para descargar varios archivos.
+- Funciona también con álbumes privados (una vez desbloqueados).
 
 ## Límites y privacidad
 - El proyecto está configurado para imágenes JPEG, PNG, WebP y AVIF de hasta 50 MB cada una. Puedes ajustar el límite en `schema.sql` y en el bucket de Supabase.
